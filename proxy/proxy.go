@@ -70,6 +70,8 @@ func (pr *Proxy) HandleHttp(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fmt.Println(err)
 	}
+
+	pr.Cacher.GetRequests()
 }
 
 func (pr *Proxy) handleRedirect() RedirectHandler {
