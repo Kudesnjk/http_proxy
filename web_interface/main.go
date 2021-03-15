@@ -3,20 +3,18 @@ package main
 import (
 	"context"
 	"log"
-	"net/http"
-	"time"
 
 	"github.com/Kudesnjk/http_proxy/cacher/mongo_cacher"
-	"github.com/Kudesnjk/http_proxy/proxy"
+	"github.com/Kudesnjk/http_proxy/web_interface/server"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 const (
+	WEB_INTERFACE_ADDRESS = "localhost:8000"
 	MONGO_ADDRESS         = "mongodb://localhost:27017/"
 	MONGO_DB_NAME         = "proxy_db"
 	MONGO_COLLECTION_NAME = "requests"
-	PROXY_PORT            = 8080
 )
 
 func main() {
@@ -36,19 +34,6 @@ func main() {
 	collection := client.Database(MONGO_DB_NAME).Collection(MONGO_COLLECTION_NAME)
 	mongoCacher := mongo_cacher.NewCacher(collection, ctx)
 
-	proxy := proxy.NewProxy(PROXY_PORT, time.Second*10, mongoCacher)
-
-	server := http.Server{
-		Addr: proxy.Port,
-		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.Method == http.MethodConnect {
-				proxy.HandleHttps(w, r)
-			} else {
-				proxy.HandleHttp(w, r)
-			}
-		}),
-	}
-
-	log.Println("Proxy is running")
-	log.Fatalln(server.ListenAndServe())
+	server := server.NewWebInterface(mongoCacher)
+	server.RunWebInterface(WEB_INTERFACE_ADDRESS)
 }

@@ -1,4 +1,4 @@
-package web_interface
+package server
 
 import (
 	"bytes"
