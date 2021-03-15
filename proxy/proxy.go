@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
-	"net/url"
 	"strconv"
 	"time"
 
@@ -34,11 +33,7 @@ func NewProxy(port int, timeout time.Duration, cacher cacher.Cacher) *Proxy {
 }
 
 func (pr *Proxy) HandleHttp(w http.ResponseWriter, r *http.Request) {
-	r.RequestURI = ""
-	r.URL = &url.URL{Host: r.Host, Path: r.URL.Path}
-	r.URL.Scheme = "http"
 	r.Header.Del(PROXY_HEADER)
-
 	client := http.Client{
 		CheckRedirect: pr.handleRedirect(),
 		Timeout:       pr.Timeout,
@@ -70,8 +65,6 @@ func (pr *Proxy) HandleHttp(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fmt.Println(err)
 	}
-
-	pr.Cacher.GetRequests()
 }
 
 func (pr *Proxy) handleRedirect() RedirectHandler {
@@ -81,6 +74,7 @@ func (pr *Proxy) handleRedirect() RedirectHandler {
 }
 
 func (pr *Proxy) HandleHttps(w http.ResponseWriter, r *http.Request) {
+	r.Header.Del(PROXY_HEADER)
 	dest_conn, err := net.DialTimeout("tcp", r.Host, pr.Timeout)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusServiceUnavailable)
@@ -103,6 +97,7 @@ func (pr *Proxy) HandleHttps(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusServiceUnavailable)
 	}
+
 	go pr.transfer(dest_conn, client_conn)
 	go pr.transfer(client_conn, dest_conn)
 }

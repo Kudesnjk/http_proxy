@@ -2,12 +2,12 @@ package mongo_cacher
 
 import (
 	"context"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 
 	"github.com/Kudesnjk/http_proxy/cacher"
 	"go.mongodb.org/mongo-driver/bson"
@@ -18,12 +18,14 @@ import (
 type MongoCacher struct {
 	collection *mongo.Collection
 	context    context.Context
+	mu         *sync.Mutex
 }
 
 func NewCacher(collection *mongo.Collection, context context.Context) cacher.Cacher {
 	return &MongoCacher{
 		collection: collection,
 		context:    context,
+		mu:         &sync.Mutex{},
 	}
 }
 
@@ -43,11 +45,16 @@ func (mc *MongoCacher) InsertRequest(r *http.Request) error {
 		{Key: "query_params", Value: r.URL.RawQuery},
 	}
 
+	mc.mu.Lock()
+	defer mc.mu.Unlock()
 	_, err = mc.collection.InsertOne(mc.context, request)
 	return err
 }
 
 func (mc *MongoCacher) GetRequests() ([]http.Request, error) {
+	mc.mu.Lock()
+	defer mc.mu.Unlock()
+
 	cursor, err := mc.collection.Find(mc.context, bson.D{})
 	if err != nil {
 		return nil, err
@@ -84,8 +91,6 @@ func (mc *MongoCacher) GetRequests() ([]http.Request, error) {
 		}
 		i++
 	}
-
-	fmt.Println(requests[0])
 
 	return requests, nil
 }
