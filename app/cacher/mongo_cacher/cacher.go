@@ -2,13 +2,14 @@ package mongo_cacher
 
 import (
 	"context"
+	"errors"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
 	"strings"
 
-	"github.com/Kudesnjk/http_proxy/cacher"
+	"github.com/Kudesnjk/http_proxy/app/cacher"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -17,6 +18,7 @@ import (
 type MongoCacher struct {
 	collection *mongo.Collection
 	context    context.Context
+	requests   []http.Request
 }
 
 func NewCacher(collection *mongo.Collection, context context.Context) cacher.Cacher {
@@ -84,5 +86,23 @@ func (mc *MongoCacher) GetRequests() ([]http.Request, error) {
 		i++
 	}
 
+	mc.requests = requests
 	return requests, nil
+}
+
+func (mc *MongoCacher) GetSingleRequest(id int) (*http.Request, error) {
+	if id >= 0 && id < len(mc.requests) {
+		return &mc.requests[id], nil
+	}
+
+	_, err := mc.GetRequests()
+	if err != nil {
+		return nil, err
+	}
+
+	if id >= len(mc.requests) {
+		return nil, errors.New("No request with such id")
+	}
+
+	return &mc.requests[id], nil
 }

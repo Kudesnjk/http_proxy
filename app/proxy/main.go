@@ -6,14 +6,14 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Kudesnjk/http_proxy/cacher/mongo_cacher"
-	"github.com/Kudesnjk/http_proxy/proxy"
+	"github.com/Kudesnjk/http_proxy/app/cacher/mongo_cacher"
+	"github.com/Kudesnjk/http_proxy/app/proxy/proxy"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 const (
-	MONGO_ADDRESS         = "mongodb://localhost:27017/"
+	MONGO_ADDRESS         = "mongodb://mongo:27017/"
 	MONGO_DB_NAME         = "proxy_db"
 	MONGO_COLLECTION_NAME = "requests"
 	PROXY_PORT            = 8080
@@ -41,11 +41,7 @@ func main() {
 	server := http.Server{
 		Addr: proxy.Port,
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.Method == http.MethodConnect {
-				proxy.HandleHttps(w, r)
-			} else {
-				proxy.HandleHttp(w, r)
-			}
+			proxy.HandleHttp(w, r)
 		}),
 	}
 

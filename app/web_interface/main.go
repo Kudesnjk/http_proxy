@@ -4,15 +4,15 @@ import (
 	"context"
 	"log"
 
-	"github.com/Kudesnjk/http_proxy/cacher/mongo_cacher"
-	"github.com/Kudesnjk/http_proxy/web_interface/server"
+	"github.com/Kudesnjk/http_proxy/app/cacher/mongo_cacher"
+	"github.com/Kudesnjk/http_proxy/app/web_interface/server"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 const (
-	WEB_INTERFACE_ADDRESS = "localhost:8000"
-	MONGO_ADDRESS         = "mongodb://localhost:27017/"
+	WEB_INTERFACE_ADDRESS = "0.0.0.0:8000"
+	MONGO_ADDRESS         = "mongodb://mongo:27017/"
 	MONGO_DB_NAME         = "proxy_db"
 	MONGO_COLLECTION_NAME = "requests"
 )

@@ -1,0 +1,14 @@
+version: "3.8"
+
+services: 
+  mongo:
+    image: mongo:latest
+    restart: always
+    ports: 
+      - "27017:27017"
+
+  proxy:
+    build: .
+    ports: 
+      - "8080:8080"
+      - "8000:8000"

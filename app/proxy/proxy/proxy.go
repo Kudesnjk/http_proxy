@@ -2,14 +2,13 @@ package proxy
 
 import (
 	"fmt"
-	"io"
 	"io/ioutil"
-	"net"
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 
-	"github.com/Kudesnjk/http_proxy/cacher"
+	"github.com/Kudesnjk/http_proxy/app/cacher"
 )
 
 const (
@@ -33,9 +32,18 @@ func NewProxy(port int, timeout time.Duration, cacher cacher.Cacher) *Proxy {
 }
 
 func (pr *Proxy) HandleHttp(w http.ResponseWriter, r *http.Request) {
+	if r.Proto != "HTTP/1.1" || r.Method == "CONNECT" {
+		http.Error(w, "Proxy support HTTP only", http.StatusForbidden)
+		return
+	}
+
+	url, _ := url.Parse(r.RequestURI)
+	r.RequestURI = ""
+	r.URL = url
 	r.Header.Del(PROXY_HEADER)
+
 	client := http.Client{
-		CheckRedirect: pr.handleRedirect(),
+		CheckRedirect: HandleRedirect(),
 		Timeout:       pr.Timeout,
 	}
 
@@ -67,43 +75,8 @@ func (pr *Proxy) HandleHttp(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (pr *Proxy) handleRedirect() RedirectHandler {
+func HandleRedirect() RedirectHandler {
 	return func(req *http.Request, via []*http.Request) error {
 		return http.ErrUseLastResponse
 	}
-}
-
-func (pr *Proxy) HandleHttps(w http.ResponseWriter, r *http.Request) {
-	r.Header.Del(PROXY_HEADER)
-	dest_conn, err := net.DialTimeout("tcp", r.Host, pr.Timeout)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusServiceUnavailable)
-		return
-	}
-
-	err = pr.Cacher.InsertRequest(r)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	w.WriteHeader(http.StatusOK)
-	hijacker, ok := w.(http.Hijacker)
-	if !ok {
-		http.Error(w, "Hijacking not supported", http.StatusInternalServerError)
-		return
-	}
-
-	client_conn, _, err := hijacker.Hijack()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusServiceUnavailable)
-	}
-
-	go pr.transfer(dest_conn, client_conn)
-	go pr.transfer(client_conn, dest_conn)
-}
-
-func (pr *Proxy) transfer(destination io.WriteCloser, source io.ReadCloser) {
-	defer destination.Close()
-	defer source.Close()
-	io.Copy(destination, source)
 }
